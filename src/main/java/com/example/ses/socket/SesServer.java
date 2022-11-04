@@ -4,12 +4,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -19,6 +22,7 @@ public class SesServer {
     private static Socket socket;
     private static ObjectInputStream inputStream;
     private static ObjectOutputStream outputStream;
+    private static List<String> messageList;
 
     @Value("${app.port}")
     private int port;
@@ -26,12 +30,23 @@ public class SesServer {
     @EventListener(ApplicationReadyEvent.class)
     public void startServer() throws Exception {
         log.info("port {}", port);
-        server = new ServerSocket(port);
+        readTestData();
         connectClient();
+    }
+
+    private void readTestData() throws IOException {
+        Resource resource = new ClassPathResource("test.data");
+        InputStream inputStream = resource.getInputStream();
+        try ( BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream)) ) {
+            messageList = reader.lines().collect(Collectors.toList());
+            System.out.println(messageList.size());
+            System.out.println(messageList);
+        }
     }
 
     private void connectClient() throws Exception {
         log.info("Waiting for the client");
+        server = new ServerSocket(port);
         socket = server.accept();
         inputStream = new ObjectInputStream(socket.getInputStream());
         outputStream = new ObjectOutputStream(socket.getOutputStream());
@@ -56,7 +71,7 @@ public class SesServer {
         log.info("Send done");
     }
 
-    private static String generateMessage(int i) {
-        return "hello " + i;
+    private static String generateMessage(int index) {
+        return messageList.get(index % messageList.size());
     }
 }
