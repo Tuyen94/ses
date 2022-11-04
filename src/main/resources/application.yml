@@ -1,0 +1,5 @@
+server:
+  port: 2208
+
+app:
+  port: 1994
